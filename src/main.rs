@@ -1,3 +1,4 @@
+mod arithmetic;
 mod logic;
 
 fn main() {

@@ -1,9 +1,9 @@
-use crate::logic::Bit::{O, I};
+use crate::logic::Bit::{I, O};
+use num_traits::{FromPrimitive, PrimInt};
+use std::convert::{From, Into};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::ops::{Index, IndexMut};
-use std::convert::{From, Into};
-use num_traits::{PrimInt, FromPrimitive};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Bit {
@@ -15,14 +15,15 @@ impl Display for Bit {
     fn fmt(&self, dest: &mut Formatter) -> fmt::Result {
         let buf = match self {
             I => "I".to_string(),
-            O => "O".to_string()
+            O => "O".to_string(),
         };
         write!(dest, "{}", buf)
     }
 }
 
 impl<T> From<T> for Bit
-    where T: PrimInt + FromPrimitive
+where
+    T: PrimInt + FromPrimitive,
 {
     fn from(value: T) -> Self {
         if value == T::from_i32(0).unwrap() {
@@ -45,22 +46,8 @@ impl Word {
 
     pub fn to_slice(&self) -> [Bit; 16] {
         [
-            self[0],
-            self[1],
-            self[2],
-            self[3],
-            self[4],
-            self[5],
-            self[6],
-            self[7],
-            self[8],
-            self[9],
-            self[10],
-            self[11],
-            self[12],
-            self[13],
-            self[14],
-            self[15]
+            self[0], self[1], self[2], self[3], self[4], self[5], self[6], self[7], self[8],
+            self[9], self[10], self[11], self[12], self[13], self[14], self[15],
         ]
     }
 }
@@ -104,7 +91,7 @@ impl From<String> for Word {
             instruction[i] = match bytes {
                 48 => O,
                 49 => I,
-                _ => panic!("`WOrd::from_string` fail: cannot find 0 or 1.")
+                _ => panic!("`WOrd::from_string` fail: cannot find 0 or 1."),
             };
             i = if i == 16 {
                 panic!("`Word::from_string` fail: need less than 16.")
@@ -129,7 +116,7 @@ impl From<&str> for Word {
             instruction[i] = match bytes {
                 48 => O,
                 49 => I,
-                _ => panic!("`Word::from_string` fail: cannot find 0 or 1.")
+                _ => panic!("`Word::from_string` fail: cannot find 0 or 1."),
             };
             i = if i == 16 {
                 panic!("`Word::from_string` fail: need less than 16.")
@@ -149,12 +136,12 @@ pub fn nand(a: Bit, b: Bit) -> Bit {
     match a {
         O => match b {
             O => I,
-            I => I
+            I => I,
         },
         I => match b {
             O => I,
-            I => O
-        }
+            I => O,
+        },
     }
 }
 
@@ -179,10 +166,7 @@ pub fn mux(a: Bit, b: Bit, sel: Bit) -> Bit {
 }
 
 pub fn dmux(inc: Bit, sel: Bit) -> [Bit; 2] {
-    [
-        and(inc, not(sel)),
-        and(inc, sel)
-    ]
+    [and(inc, not(sel)), and(inc, sel)]
 }
 
 pub fn not16(a: Word) -> Word {
@@ -271,24 +255,14 @@ pub fn mux16(a: Word, b: Word, sel: Bit) -> Word {
 
 pub fn or8way(a: [Bit; 8]) -> Bit {
     or(
-        or(
-            or(a[0], a[1]),
-            or(a[2], a[3]),
-        ),
-        or(
-            or(a[4], a[5]),
-            or(a[6], a[7]),
-        ),
+        or(or(a[0], a[1]), or(a[2], a[3])),
+        or(or(a[4], a[5]), or(a[6], a[7])),
     )
 }
 
 pub fn mux4way16(a: Word, b: Word, c: Word, d: Word, sel: [Bit; 2]) -> Word {
     let mux2 = |a: Bit, b: Bit, c: Bit, d: Bit, s0: Bit, s1: Bit| -> Bit {
-        mux(
-            mux(a, b, s1),
-            mux(c, d, s1),
-            s0,
-        )
+        mux(mux(a, b, s1), mux(c, d, s1), s0)
     };
     Word::new([
         mux2(a[0], b[0], c[0], d[0], sel[0], sel[1]),
@@ -310,40 +284,85 @@ pub fn mux4way16(a: Word, b: Word, c: Word, d: Word, sel: [Bit; 2]) -> Word {
     ])
 }
 
-pub fn mux8way16(a: Word, b: Word, c: Word, d: Word, e: Word, f: Word, g: Word, h: Word, s: [Bit; 3]) -> Word {
-    let mux3 = |a: Bit, b: Bit, c: Bit, d: Bit, e: Bit, f: Bit, g: Bit, h: Bit, s0: Bit, s1: Bit, s2: Bit| -> Bit {
+pub fn mux8way16(
+    a: Word,
+    b: Word,
+    c: Word,
+    d: Word,
+    e: Word,
+    f: Word,
+    g: Word,
+    h: Word,
+    s: [Bit; 3],
+) -> Word {
+    let mux3 = |a: Bit,
+                b: Bit,
+                c: Bit,
+                d: Bit,
+                e: Bit,
+                f: Bit,
+                g: Bit,
+                h: Bit,
+                s0: Bit,
+                s1: Bit,
+                s2: Bit|
+     -> Bit {
         mux(
-            mux(
-                mux(a, b, s2),
-                mux(c, d, s2),
-                s1,
-            ),
-            mux(
-                mux(e, f, s2),
-                mux(g, h, s2),
-                s1,
-            ),
+            mux(mux(a, b, s2), mux(c, d, s2), s1),
+            mux(mux(e, f, s2), mux(g, h, s2), s1),
             s0,
         )
     };
 
     Word::new([
-        mux3(a[0], b[0], c[0], d[0], e[0], f[0], g[0], h[0], s[0], s[1], s[2]),
-        mux3(a[1], b[1], c[1], d[1], e[1], f[1], g[1], h[1], s[0], s[1], s[2]),
-        mux3(a[2], b[2], c[2], d[2], e[2], f[2], g[2], h[2], s[0], s[1], s[2]),
-        mux3(a[3], b[3], c[3], d[3], e[3], f[3], g[3], h[3], s[0], s[1], s[2]),
-        mux3(a[4], b[4], c[4], d[4], e[4], f[4], g[4], h[4], s[0], s[1], s[2]),
-        mux3(a[5], b[5], c[5], d[5], e[5], f[5], g[5], h[5], s[0], s[1], s[2]),
-        mux3(a[6], b[6], c[6], d[6], e[6], f[6], g[6], h[6], s[0], s[1], s[2]),
-        mux3(a[7], b[7], c[7], d[7], e[7], f[7], g[7], h[7], s[0], s[1], s[2]),
-        mux3(a[8], b[8], c[8], d[8], e[8], f[8], g[8], h[8], s[0], s[1], s[2]),
-        mux3(a[9], b[9], c[9], d[9], e[9], f[9], g[9], h[9], s[0], s[1], s[2]),
-        mux3(a[10], b[10], c[10], d[10], e[10], f[10], g[10], h[10], s[0], s[1], s[2]),
-        mux3(a[11], b[11], c[11], d[11], e[11], f[11], g[11], h[11], s[0], s[1], s[2]),
-        mux3(a[12], b[12], c[12], d[12], e[12], f[12], g[12], h[12], s[0], s[1], s[2]),
-        mux3(a[13], b[13], c[13], d[13], e[13], f[13], g[13], h[13], s[0], s[1], s[2]),
-        mux3(a[14], b[14], c[14], d[14], e[14], f[14], g[14], h[14], s[0], s[1], s[2]),
-        mux3(a[15], b[15], c[15], d[15], e[15], f[15], g[15], h[15], s[0], s[1], s[2]),
+        mux3(
+            a[0], b[0], c[0], d[0], e[0], f[0], g[0], h[0], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[1], b[1], c[1], d[1], e[1], f[1], g[1], h[1], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[2], b[2], c[2], d[2], e[2], f[2], g[2], h[2], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[3], b[3], c[3], d[3], e[3], f[3], g[3], h[3], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[4], b[4], c[4], d[4], e[4], f[4], g[4], h[4], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[5], b[5], c[5], d[5], e[5], f[5], g[5], h[5], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[6], b[6], c[6], d[6], e[6], f[6], g[6], h[6], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[7], b[7], c[7], d[7], e[7], f[7], g[7], h[7], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[8], b[8], c[8], d[8], e[8], f[8], g[8], h[8], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[9], b[9], c[9], d[9], e[9], f[9], g[9], h[9], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[10], b[10], c[10], d[10], e[10], f[10], g[10], h[10], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[11], b[11], c[11], d[11], e[11], f[11], g[11], h[11], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[12], b[12], c[12], d[12], e[12], f[12], g[12], h[12], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[13], b[13], c[13], d[13], e[13], f[13], g[13], h[13], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[14], b[14], c[14], d[14], e[14], f[14], g[14], h[14], s[0], s[1], s[2],
+        ),
+        mux3(
+            a[15], b[15], c[15], d[15], e[15], f[15], g[15], h[15], s[0], s[1], s[2],
+        ),
     ])
 }
 
@@ -352,7 +371,7 @@ pub fn dmux4way(inc: Bit, sel: [Bit; 2]) -> [Bit; 4] {
         and(not(sel[0]), and(not(sel[1]), inc)),
         and(not(sel[0]), and(sel[1], inc)),
         and(sel[0], and(not(sel[1]), inc)),
-        and(sel[0], and(sel[1], inc))
+        and(sel[0], and(sel[1], inc)),
     ]
 }
 
@@ -371,10 +390,12 @@ pub fn dmux8way(inc: Bit, sel: [Bit; 3]) -> [Bit; 8] {
 
 #[cfg(test)]
 mod tests {
-    use super::{nand, not, and};
-    use crate::logic::Bit::{O, I};
-    use crate::logic::{Word, and16, or16, mux16, or8way, mux4way16, mux8way16, dmux4way, dmux8way};
-    use crate::logic::{or, xor, mux, dmux, not16};
+    use super::Bit::{I, O};
+    use super::Word;
+    use super::{
+        and, and16, dmux, dmux4way, dmux8way, mux, mux16, mux4way16, mux8way16, nand, not, not16,
+        or, or16, or8way, xor,
+    };
 
     #[test]
     fn for_nand() {
