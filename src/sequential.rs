@@ -52,7 +52,7 @@ impl DFF {
         }
     }
 
-    pub fn outpu(self, clock: &Clock) -> bit {
+    pub fn output(self, clock: &Clock) -> bit {
         match clock.state() {
             Tick => self.state_past,
             Tock => self.state_new,
@@ -63,4 +63,54 @@ impl DFF {
 #[derive(Debug, Clone, Copy)]
 pub struct Bit {
     dff: DFF,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ClockState::{Tick, Tock};
+    use super::*;
+    use crate::logic::bit::{I, O};
+
+    #[test]
+    fn for_clock_new() {
+        let mut clock = Clock::new();
+        assert_eq!(clock.state(), Tick);
+        clock.next();
+        assert_eq!(clock.state(), Tock);
+        clock.next();
+        assert_eq!(clock.state(), Tick);
+    }
+
+    #[test]
+    fn for_dff() {
+        // init: past -> O, new -> O
+        let mut dff = DFF::new();
+        let mut clock = Clock::new();
+
+        // past -> O, new -> I
+        dff.input(I, &clock);
+        // clock = Tick, output = past
+        assert_eq!(dff.output(&clock), O);
+        // clock -> Tock
+        clock.next();
+
+        // clock = Tock, nothing happen
+        dff.input(O, &clock);
+        // clock = Tock, output = new
+        assert_eq!(dff.output(&clock), I);
+        // clock -> Tick
+        clock.next();
+
+        // past -> I, new -> O
+        dff.input(O, &clock);
+        // clock = Tick, output = past
+        assert_eq!(dff.output(&clock), I);
+        // clock -> Tock
+        clock.next();
+
+        // clock = Tock, nothing happen
+        dff.input(O, &clock);
+        // clock = Tock, output = new
+        assert_eq!(dff.output(&clock), O);
+    }
 }
